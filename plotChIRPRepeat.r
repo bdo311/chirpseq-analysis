@@ -27,8 +27,8 @@ par(mfrow=c(4,5))
 for (i in 1:nrow(repeatPos)) {
 	start = repeatPos$start[i] + 5
 	stop = repeatPos$stop[i] - 5
-	maxY = max(val[start:stop]) * 1.3
-	plot(val[start:stop], type='l', main=rownames(repeatPos)[i], ylim=c(0, maxY), xlab="Position", ylab="GRO-seq density")
+	maxY = max(vals[start:stop]) * 1.3
+	plot(vals[start:stop], type='l', main=rownames(repeatPos)[i], ylim=c(0, maxY), xlab="Position", ylab="Read density")
 }
 dev.off()
 
@@ -45,8 +45,8 @@ rRNAend=rRNA_start +13401
 
 # whole rRNA
 pdf(paste(name, "_rrna.pdf", sep=''), width=8, height=3)
-maxY = max(val[rRNA_start:rRNAend]) * 1.3
-plot(val[rRNA_start:rRNAend], type='l', main="rRNA", ylim=c(0, maxY), xlab="Position", ylab="GRO-seq density")
+maxY = max(vals[rRNA_start:rRNAend]) * 1.3
+plot(vals[rRNA_start:rRNAend], type='l', main="rRNA", ylim=c(0, maxY), xlab="Position", ylab="Read density")
 abline(v=c(start18s, end18s, start5s, end5s, start28s, end28s)-rRNA_start, col="green")
 dev.off()
 
@@ -55,14 +55,14 @@ dev.off()
 pdf(paste(name, "_rrna_regions.pdf"), width=8, height=3)
 par(mfrow=c(1, 3))
 
-maxY = max(val[start18s:end18s]) * 1.3
-plot(val[start18s:end18s], type='l', main="18S rRNA", ylim=c(0, maxY), xlab="Position", ylab="GRO-seq density")
+maxY = max(vals[start18s:end18s]) * 1.3
+plot(vals[start18s:end18s], type='l', main="18S rRNA", ylim=c(0, maxY), xlab="Position", ylab="Read density")
 
-maxY = max(val[start5s:end5s]) * 1.3
-plot(val[start5s:end5s], type='l', main="5S rRNA", ylim=c(0, maxY), xlab="Position", ylab="GRO-seq density")
+maxY = max(vals[start5s:end5s]) * 1.3
+plot(vals[start5s:end5s], type='l', main="5S rRNA", ylim=c(0, maxY), xlab="Position", ylab="Read density")
 
-maxY = max(val[start28s:end28s]) * 1.3
-plot(val[start28s:end28s], type='l', main="28s rRNA", ylim=c(0, maxY), xlab="Position", ylab="GRO-seq density")
+maxY = max(vals[start28s:end28s]) * 1.3
+plot(vals[start28s:end28s], type='l', main="28s rRNA", ylim=c(0, maxY), xlab="Position", ylab="Read density")
 
 dev.off()
 

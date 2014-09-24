@@ -2,7 +2,7 @@
 # 9/23/14
 # zeros out the bedgraph for all intervals in the bed file; expands intervals by 2x
 
-import csv, sys
+import csv, sys, collections
 csv.register_dialect('textdialect', delimiter='\t')
 
 def processBedFile(bed):
@@ -27,16 +27,28 @@ def processBedgraph(bg, chrToBedInts, ofn):
 	ifile = open(bg, 'r')
 	reader = csv.reader(ifile, 'textdialect')
 	
+	reader.next()
 	for row in reader:
 		chr = row[0]
-		start, stop = int(row[1]), int(row[2])
+		start, end = int(row[1]), int(row[2])
 		val = float(row[3])
 		
+		inInterval = False
 		for interval in chrToBedInts[chr]:
-			if start > interval[1] or end < interval[0]: writer.writerow(row) #region outside interval
-			elif start < interval[0]: writer.writerow([chr, start, interval[0], val]) #region overlapping left side of interval
-			elif end > interval[1]: writer.writerow([chr, interval[1], end, val])
-			else: continue #region completely inside interval
+			if start > interval[1] or end < interval[0]: # region doesn't overlap interval at all
+				continue
+			elif start < interval[0]: 
+				writer.writerow([chr, start, interval[0], val]) #region overlapping left side of interval
+				inInterval = True
+				break
+			elif end > interval[1]: 
+				writer.writerow([chr, interval[1], end, val])
+				inInterval = True
+				break
+			else: #region completely inside interval
+				inInterval = True
+				break 
+		if not inInterval: writer.writerow(row)
 			
 	ifile.close()
 	ofile.close()
