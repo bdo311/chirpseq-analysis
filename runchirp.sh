@@ -1,6 +1,5 @@
 #!/bin/sh
 # runchirp.sh
-# 
 
 # parameters
 if [ "$#" -ne 5 ]; then
@@ -38,10 +37,10 @@ parallel "macs14 -t {} -n {.}_shifted -g mm -B -S" ::: *_genome.sam
 parallel "mv {.}_shifted_MACS_bedGraph/treat/*.gz {.}_shifted.bedGraph.gz; rm -rf {.}_shifted_MACS_bedGraph/; gunzip *.gz" ::: *_genome.sam
 
 #3. remove RNA component, and normalize
-remove_program="~/Scripts/chirpseq_analysis/removeInterval.py"
+remove_program="/home/raflynn/Scripts/chirpseq_analysis/removeInterval.py"
 parallel "python $remove_program {} $remove {.}_removed.bedGraph; norm_bedGraph.pl {.}_removed.bedGraph {.}_removed_norm.bedGraph" ::: *_genome_shifted.bedGraph
 
-# 4. merge genome bedgraph
+# # 4. merge genome bedgraph
 merge_program="/home/raflynn/Scripts/chirpseq_analysis/takeLower.py"
 twofiles=$(echo *_genome_shifted_removed_norm.bedGraph)
 bedtools unionbedg -i $twofiles > genome_merged_twocol.bedGraph
@@ -66,4 +65,4 @@ norm_bedGraph.pl repeat_merged.bedGraph ${name}_repeat_merged_norm.bedGraph
 script="/home/raflynn/Scripts/chirpseq_analysis/plotChIRPRepeat.r"
 Rscript $script ${name}_repeat_merged_norm.bedGraph $repeat_pos $name 
 
-exit
+# exit

@@ -36,12 +36,23 @@ ifile.seek(0)
 ofile = open(ofn, 'w')
 writer = csv.writer(ofile, 'textdialect')
 
+pastRow = ['0', 0, 0, 0]
 for row in reader:
 	if '_' in row[0]: continue
-	if float(row[-1]) == 0: continue
-	if int(row[1]) > chrToLimit[row[0]] or int(row[2]) > chrToLimit[row[0]]: continue
-	row[-1] = float(row[-1]) * multFactor
-	writer.writerow(row)
+	start, stop, val = int(row[1]), int(row[2]), float(row[-1])
+	if val == 0: continue
+	if start > chrToLimit[row[0]] or stop > chrToLimit[row[0]]: continue
+	val = val * multFactor
+	row[-1] = val
+	
+	if start == int(pastRow[2]) and val == float(pastRow[-1]): 
+		pastRow[2] = stop
+	else:
+		if pastRow[0] != '0': writer.writerow(pastRow)
+		pastRow = row
+	
+	
+if pastRow[0] != '0': writer.writerow(pastRow)
 ifile.close()
 ofile.close()
 

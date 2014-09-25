@@ -52,7 +52,7 @@ dev.off()
 
 
 # regions of rRNA
-pdf(paste(name, "_rrna_regions.pdf"), width=8, height=3)
+pdf(paste(name, "_rrna_regions.pdf", sep=''), width=8, height=3)
 par(mfrow=c(1, 3))
 
 maxY = max(vals[start18s:end18s]) * 1.3
