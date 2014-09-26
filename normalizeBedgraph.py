@@ -26,7 +26,7 @@ reader = csv.reader(ifile, 'textdialect')
 
 sum = 0
 for row in reader:
-	if '_' in row[0]: continue
+	if '_' in row[0] and 'chr' in row[0]: continue
 	sum += math.fabs((int(row[2]) - int(row[1])) * float(row[3]))
 
 multFactor = 500000000/sum
@@ -38,7 +38,7 @@ writer = csv.writer(ofile, 'textdialect')
 
 pastRow = ['0', 0, 0, 0]
 for row in reader:
-	if '_' in row[0]: continue
+	if '_' in row[0] and 'chr' in row[0]: continue
 	start, stop, val = int(row[1]), int(row[2]), float(row[-1])
 	if val == 0: continue
 	if start > chrToLimit[row[0]] or stop > chrToLimit[row[0]]: continue

@@ -35,13 +35,24 @@ dev.off()
 
 ## rRNA
 rRNA_start = repeatPos$start[17]
-start18s=rRNA_start +4007
-end18s=rRNA_start +5876
-start5s=rRNA_start +6877
-end5s=rRNA_start +7033
-start28s=rRNA_start +8123
-end28s=rRNA_start +12836
-rRNAend=rRNA_start +13401
+org = args[4]
+if (org == "mouse") {
+	start18s=rRNA_start +4007
+	end18s=rRNA_start +5876
+	start5s=rRNA_start +6877
+	end5s=rRNA_start +7033
+	start28s=rRNA_start +8123
+	end28s=rRNA_start +12836
+	rRNAend=rRNA_start +13401
+} else {
+	start18s=rRNA_start +3657
+	end18s=rRNA_start +5527
+	start5s=rRNA_start +6623
+	end5s=rRNA_start +6779
+	start28s=rRNA_start +7935
+	end28s=rRNA_start +12969
+	rRNAend=rRNA_start +13314
+}
 
 # whole rRNA
 pdf(paste(name, "_rrna.pdf", sep=''), width=8, height=3)

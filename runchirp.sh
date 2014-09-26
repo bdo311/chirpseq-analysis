@@ -36,16 +36,16 @@ parallel "bowtie2 -p 4 -x $genome_index -k 1 -U {} -S {.}.sam" ::: *_genome.fast
 parallel "macs14 -t {} -n {.}_shifted -g mm -B -S" ::: *_genome.sam
 parallel "mv {.}_shifted_MACS_bedGraph/treat/*.gz {.}_shifted.bedGraph.gz; rm -rf {.}_shifted_MACS_bedGraph/; gunzip *.gz" ::: *_genome.sam
 
-#3. remove RNA component, and normalize
+3. remove RNA component, and normalize
 remove_program="/home/raflynn/Scripts/chirpseq_analysis/removeInterval.py"
-parallel "python $remove_program {} $remove {.}_removed.bedGraph; norm_bedGraph.pl {.}_removed.bedGraph {.}_removed_norm.bedGraph" ::: *_genome_shifted.bedGraph
+norm_program="/home/raflynn/Scripts/chirpseq_analysis/normalizeBedgraph.py"
+parallel "python $remove_program {} $remove {.}_removed.bedGraph; python $norm_program {.}_removed.bedGraph $sizes {.}_removed_norm.bedGraph" ::: *_genome_shifted.bedGraph
 
-# # 4. merge genome bedgraph
+# 4. merge genome bedgraph
 merge_program="/home/raflynn/Scripts/chirpseq_analysis/takeLower.py"
 twofiles=$(echo *_genome_shifted_removed_norm.bedGraph)
 bedtools unionbedg -i $twofiles > genome_merged_twocol.bedGraph
 python $merge_program genome_merged_twocol.bedGraph genome_merged.bedGraph
-norm_program="/home/raflynn/Scripts/chirpseq_analysis/normalizeBedgraph.py"
 python $norm_program genome_merged.bedGraph $sizes ${name}_genome_merged_norm.bedGraph
 
 # 5. bigwig for genome
@@ -59,10 +59,10 @@ parallel "bedtools genomecov -ibam {} -bg > {.}.bedGraph; norm_bedGraph.pl {.}.b
 twofiles=$(echo *_repeat_sorted_norm.bedGraph)
 bedtools unionbedg -i $twofiles > repeat_merged_twocol.bedGraph
 python $merge_program repeat_merged_twocol.bedGraph repeat_merged.bedGraph
-norm_bedGraph.pl repeat_merged.bedGraph ${name}_repeat_merged_norm.bedGraph
+norm_bedGraph.pl repeat_merged.bedGraph  ${name}_repeat_merged_norm.bedGraph
 
 #8. get plot for repeats
 script="/home/raflynn/Scripts/chirpseq_analysis/plotChIRPRepeat.r"
-Rscript $script ${name}_repeat_merged_norm.bedGraph $repeat_pos $name 
+Rscript $script ${name}_repeat_merged_norm.bedGraph $repeat_pos $name $org
 
 # exit
