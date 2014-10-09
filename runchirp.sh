@@ -36,7 +36,7 @@ parallel "bowtie2 -p 4 -x $genome_index -k 1 -U {} -S {.}.sam" ::: *_genome.fast
 parallel "macs14 -t {} -n {.}_shifted -g mm -B -S" ::: *_genome.sam
 parallel "mv {.}_shifted_MACS_bedGraph/treat/*.gz {.}_shifted.bedGraph.gz; rm -rf {.}_shifted_MACS_bedGraph/; gunzip *.gz" ::: *_genome.sam
 
-3. remove RNA component, and normalize
+# 3. remove RNA component, and normalize
 remove_program="/home/raflynn/Scripts/chirpseq_analysis/removeInterval.py"
 norm_program="/home/raflynn/Scripts/chirpseq_analysis/normalizeBedgraph.py"
 parallel "python $remove_program {} $remove {.}_removed.bedGraph; python $norm_program {.}_removed.bedGraph $sizes {.}_removed_norm.bedGraph" ::: *_genome_shifted.bedGraph
@@ -65,4 +65,4 @@ norm_bedGraph.pl repeat_merged.bedGraph  ${name}_repeat_merged_norm.bedGraph
 script="/home/raflynn/Scripts/chirpseq_analysis/plotChIRPRepeat.r"
 Rscript $script ${name}_repeat_merged_norm.bedGraph $repeat_pos $name $org
 
-# exit
+# # exit
