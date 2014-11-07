@@ -5,9 +5,9 @@ This is a set of scripts that together convert ChIRP-seq (chromatin immunoprecip
 
 Usage 
 ------
-`chirpseq.sh <organism> <name> <even fastq> <odd fastq> <removal bed file>`
+`runchirp.sh <organism> <name> <even fastq> <odd fastq> <removal bed file>`
 
-Example: `chirpseq.sh human A375 even_trimmed.fastq odd_trimmed.fastq human_7sk.bed`
+Example: `runchirp.sh human A375 even_trimmed.fastq odd_trimmed.fastq human_7sk.bed`
 
 ### Required arguments:
 
