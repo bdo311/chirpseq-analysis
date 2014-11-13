@@ -14,13 +14,13 @@ odd=$4
 remove=$5
 
 if [ $org == "mouse" ]; then
-	repeat_pos="~/Scripts/repeat_index/mm9/Mm_repeatIndex_positions.txt"
-	repeat_index="~/Scripts/repeat_index/mm9/rep"
+	repeat_pos="~/Scripts/repeat_index/mm9/Mm_repeatIndex_spaced_positions.txt"
+	repeat_index="~/Scripts/repeat_index/mm9/rep_spaced"
 	genome_index="/seq/bowtie2-2.1.0/indexes/mm9"
 	sizes="/seq/chromosome/mm9/mm9.sizes"
 elif [ $org == "human" ]; then
-	repeat_pos="~/Scripts/repeat_index/hg19/Hs_repeatIndex_positions.txt"
-	repeat_index="~/Scripts/repeat_index/hg19/rep"
+	repeat_pos="~/Scripts/repeat_index/hg19/Hs_repeatIndex__spaced_positions.txt"
+	repeat_index="~/Scripts/repeat_index/hg19/rep_spaced"
 	genome_index="/seq/bowtie2-2.1.0/indexes/hg19"
 	sizes="/seq/chromosome/hg19/hg19.sizes"
 else
