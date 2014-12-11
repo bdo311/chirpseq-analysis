@@ -13,7 +13,6 @@ for (row in 1:nrow(data)) {
 	}
 }
 
-vals = sapply(vals, function(x)ifelse(is.null(x), 0, x)) #bedgraphs omit positions where read density is 0, so I need to put them back in
 
 
 ## repeats
@@ -22,11 +21,16 @@ name = args[3]
 
 repeatPos = read.delim(repeatFn, colClasses=c("character", "numeric", "numeric", "numeric"), header=FALSE, row.names=1)
 names(repeatPos) = c("len", "start", "stop")
+
+lastVal = repeatPos[nrow(repeatPos),ncol(repeatPos)]
+vals[[lastVal+6]]=0
+vals = sapply(vals, function(x)ifelse(is.null(x), 0, x)) #bedgraphs omit positions where read density is 0, so I need to put them back in
+
 pdf(paste(name, "_repeats.pdf", sep=''), width=15, height=10)
 par(mfrow=c(4,5))
 for (i in 1:nrow(repeatPos)) {
-	start = repeatPos$start[i] + 5
-	stop = repeatPos$stop[i] - 5
+	start = repeatPos$start[i] - 5
+	stop = repeatPos$stop[i] + 5
 	maxY = max(vals[start:stop]) * 1.3
 	plot(vals[start:stop], type='l', main=rownames(repeatPos)[i], ylim=c(0, maxY), xlab="Position", ylab="Read density")
 }
@@ -34,7 +38,7 @@ dev.off()
 
 
 ## rRNA
-rRNA_start = repeatPos$start[17]
+rRNA_start = repeatPos$start[nrow(repeatPos)]
 org = args[4]
 if (org == "mouse") {
 	start18s=rRNA_start +4007
