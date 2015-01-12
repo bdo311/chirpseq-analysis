@@ -53,15 +53,17 @@ python $merge_program ${name}_genome_merged_twocol.bedGraph ${name}_genome_merge
 python $norm_program ${name}_genome_merged.bedGraph $sizes ${name}_genome_merged_norm.bedGraph
 bedGraphToBigWig ${name}_genome_merged_norm.bedGraph $sizes ${name}_genome_merged_norm.bw
 
-#6. make bedgraphs for repeat index and merge repeat bedgraph
+#6. make bedgraphs for repeat index; not merging repeat bedgraph
 parallel "bedtools genomecov -ibam {.}_rmdup.bam -bg > {.}.bedGraph; norm_bedGraph.pl {.}.bedGraph {.}_norm.bedGraph" ::: *_repeat_sorted.bam
-twofiles=$(echo *_repeat_sorted_norm.bedGraph)
-bedtools unionbedg -i $twofiles > ${name}_repeat_merged_twocol.bedGraph
-python $merge_program ${name}_repeat_merged_twocol.bedGraph ${name}_repeat_merged.bedGraph
-norm_bedGraph.pl ${name}_repeat_merged.bedGraph  ${name}_repeat_merged_norm.bedGraph
 
-#7. get plot for repeats
+#7. get stats for everything
+parallel "samtools flagstat {} > {.}_stats.txt" ::: *.bam
+
+#8. get plots for repeats
+scaleScript="/home/raflynn/Scripts/chirpseq_analysis/rescaleRepeatBedgraph.py"
+parallel "python $scaleScript {.}_stats.txt {.}_norm.bedGraph {.}_scaled.bedGraph" ::: *_repeat_sorted.bedGraph
 script="/home/raflynn/Scripts/chirpseq_analysis/plotChIRPRepeat.r"
-Rscript $script ${name}_repeat_merged_norm.bedGraph $repeat_pos $name $org
+twofiles=$(echo *_scaled.bedGraph)
+Rscript $script $twofiles $repeat_pos $name $org
 
 # # exit

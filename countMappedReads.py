@@ -6,6 +6,7 @@ csv.register_dialect("textdialect", delimiter='\t')
 
 def getStats(fn):
 	basename = os.path.basename(fn).split('.')[0] + '_stat.txt'
+	print "samtools flagstat " + fn + " > " + basename
 	os.system("samtools flagstat " + fn + " > " + basename)
 	
 def main():
