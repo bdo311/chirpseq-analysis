@@ -29,41 +29,51 @@ else
 fi
 
 #1. bowtie
-parallel "bowtie2 -p 4 -x $repeat_index -k 1 -U {} --un {.}_genome.fastq -S {.}_repeat.sam" ::: $even $odd
-parallel "bowtie2 -p 4 -x $genome_index -k 1 -U {} -S {.}.sam" ::: *_genome.fastq
+parallel "bowtie2 -p 4 -x $repeat_index -k 1 {} --un {.}_genome.fastq -S {.}_repeat.sam" ::: $even $odd
+parallel "bowtie2 -p 4 -x $genome_index -k 1 {.}_genome.fastq -S {.}_genome.sam" ::: $even $odd
 
 #2. samtools - sorting and removing duplicates
-parallel "cat {} | samtools view -Suo - - | samtools sort - {.}_sorted" ::: *.sam
-parallel "samtools rmdup -s {} {.}_rmdup.bam" ::: *_sorted.bam
+parallel "cat {.}_genome.sam | samtools view -Suo - - | samtools sort - {.}_genome_sorted" ::: $even $odd
+parallel "cat {.}_repeat.sam | samtools view -Suo - - | samtools sort - {.}_repeat_sorted" ::: $even $odd
+parallel "samtools rmdup -s {.}_genome_sorted.bam {.}_genome_sorted_rmdup.bam" ::: $even $odd
+parallel "samtools rmdup -s {.}_repeat_sorted.bam {.}_repeat_sorted_rmdup.bam" ::: $even $odd
 
 #3. getting shifted bedgraphs for reads mapped to genome
-parallel "python /seq/macs/bin/macs14 -t {.}_sorted_rmdup.bam -f BAM -n {.}_shifted -g mm -B -S" ::: *_genome.sam
-parallel "mv {.}_shifted_MACS_bedGraph/treat/*.gz {.}_shifted.bedGraph.gz; rm -rf {.}_shifted_MACS_bedGraph/; gunzip *.gz" ::: *_genome.sam
+parallel "python /seq/macs/bin/macs14 -t {.}_genome_sorted_rmdup.bam -f BAM -n {.}_genome_shifted -g mm -B -S" ::: $even $odd
+#parallel "mv {.}_genome_shifted_MACS_bedGraph/treat/*.gz {.}_genome_shifted.bedGraph.gz; rm -rf {.}_genome_shifted_MACS_bedGraph/; gunzip *.gz" ::: $even $odd
+parallel "mv {.}_genome_shifted_MACS_bedGraph/treat/*.gz {.}_genome_shifted.bedGraph.gz; gunzip {.}_genome_shifted.bedGraph.gz" ::: $even $odd
 
 #4. remove RNA component, and normalize
 remove_program="/home/raflynn/Scripts/chirpseq_analysis/removeInterval.py"
 norm_program="/home/raflynn/Scripts/chirpseq_analysis/normalizeBedgraph.py"
-parallel "python $remove_program {} $remove {.}_removed.bedGraph; python $norm_program {.}_removed.bedGraph $sizes {.}_removed_norm.bedGraph" ::: *_genome_shifted.bedGraph
+parallel "python $remove_program {.}_genome_shifted.bedGraph $remove {.}_genome_shifted_removed.bedGraph; python $norm_program {.}_genome_shifted_removed.bedGraph $sizes {.}_genome_shifted_removed_norm.bedGraph" ::: $even $odd
 
 # #5. merge genome bedgraph and make bigwig
 merge_program="/home/raflynn/Scripts/chirpseq_analysis/takeLower.py"
-twofiles=$(echo ${name}*_genome_shifted_removed_norm.bedGraph)
+twofiles="${even%%.*}_genome_shifted_removed_norm.bedGraph ${odd%%.*}_genome_shifted_removed_norm.bedGraph"
 bedtools unionbedg -i $twofiles > ${name}_genome_merged_twocol.bedGraph
 python $merge_program ${name}_genome_merged_twocol.bedGraph ${name}_genome_merged.bedGraph
-python $norm_program ${name}_genome_merged.bedGraph $sizes ${name}_genome_merged_norm.bedGraph
+norm_bedGraph.pl ${name}_genome_merged.bedGraph ${name}_genome_merged_norm.bedGraph
 bedGraphToBigWig ${name}_genome_merged_norm.bedGraph $sizes ${name}_genome_merged_norm.bw
 
 #6. make bedgraphs for repeat index; not merging repeat bedgraph
-parallel "bedtools genomecov -ibam {.}_rmdup.bam -bg > {.}.bedGraph; norm_bedGraph.pl {.}.bedGraph {.}_norm.bedGraph" ::: *_repeat_sorted.bam
+parallel "bedtools genomecov -ibam {.}_repeat_sorted_rmdup.bam -bg > {.}_repeat.bedGraph; norm_bedGraph.pl {.}_repeat.bedGraph {.}_repeat_norm.bedGraph" ::: $even $odd
 
 #7. get stats for everything
-parallel "samtools flagstat {} > {.}_stats.txt" ::: *.bam
+parallel "samtools flagstat {.}_genome_sorted.bam > {.}_genome_sorted_stats.txt" ::: $even $odd
+parallel "samtools flagstat {.}_repeat_sorted.bam > {.}_repeat_sorted_stats.txt" ::: $even $odd
 
 #8. get plots for repeats
 scaleScript="/home/raflynn/Scripts/chirpseq_analysis/rescaleRepeatBedgraph.py"
-parallel "python $scaleScript {.}_stats.txt {.}_norm.bedGraph {.}_scaled.bedGraph" ::: *_repeat_sorted.bedGraph
+parallel "python $scaleScript {.}_repeat_sorted_stats.txt {.}_repeat_norm.bedGraph {.}_repeat_scaled.bedGraph" ::: $even $odd
 script="/home/raflynn/Scripts/chirpseq_analysis/plotChIRPRepeat.r"
-twofiles=$(echo *_scaled.bedGraph)
+twofiles="${even%%.*}_repeat_scaled.bedGraph ${odd%%.*}_repeat_scaled.bedGraph"
 Rscript $script $twofiles $repeat_pos $name $org
+
+#9. remove sam and bam files
+parallel "rm -f {.}_genome_sorted.bam {.}_genome.sam {.}_repeat_sorted.bam {.}_repeat.sam" ::: $even $odd
+rm -f ${name}_genome_merged_twocol.bedGraph ${name}_genome_merged.bedGraph
+parallel "rm -f {.}_genome_shifted.bedGraph {.}_genome_shifted_removed.bedGraph {.}_genome_shifted_removed_norm.bedGraph" ::: $even $odd
+parallel "rm -f {.}_repeat_norm.bedGraph {.}_repeat.bedGraph" ::: $even $odd
 
 # # exit

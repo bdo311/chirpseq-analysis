@@ -4,19 +4,20 @@
 import csv, os, sys, multiprocessing, glob
 csv.register_dialect("textdialect", delimiter='\t')
 
+if len(sys.argv)<3: 
+	print "Usage: python countMappedReads.py <config file> <output folder>"
+	exit()
+	
+conf = sys.argv[1]
+ofolder = sys.argv[2]
+if not glob.glob(ofolder + '/'): os.mkdir(ofolder)
+	
 def getStats(fn):
-	basename = os.path.basename(fn).split('.')[0] + '_stat.txt'
+	basename = ofolder + '/' + os.path.basename(fn).split('.')[0] + '_stat.txt'
 	print "samtools flagstat " + fn + " > " + basename
 	os.system("samtools flagstat " + fn + " > " + basename)
 	
 def main():
-	if len(sys.argv)<3: 
-		print "Usage: python countMappedReads.py <config file> <output folder>"
-		exit()
-		
-	conf = sys.argv[1]
-	ofolder = sys.argv[2]
-	if not glob.glob(ofolder + '/'): os.mkdir(ofolder)
 
 	# read list of files that need to be flagstatted
 	files = []
@@ -27,7 +28,6 @@ def main():
 	ifile.close()
 	
 	# samtools
-	os.chdir(ofolder)
 	p = multiprocessing.Pool(len(files))
 	p.map(getStats, files)
 	
