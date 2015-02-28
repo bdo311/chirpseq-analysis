@@ -62,10 +62,12 @@ parallel "bedtools genomecov -ibam {.}_repeat_sorted_rmdup.bam -bg > {.}_repeat.
 #7. get stats for everything
 parallel "samtools flagstat {.}_genome_sorted.bam > {.}_genome_sorted_stats.txt" ::: $even $odd
 parallel "samtools flagstat {.}_repeat_sorted.bam > {.}_repeat_sorted_stats.txt" ::: $even $odd
+parallel "samtools flagstat {.}_genome_sorted_rmdup.bam > {.}_genome_sorted_rmdup_stats.txt" ::: $even $odd
+parallel "samtools flagstat {.}_repeat_sorted_rmdup.bam > {.}_repeat_sorted_rmdup_stats.txt" ::: $even $odd
 
 #8. get plots for repeats
 scaleScript="/home/raflynn/Scripts/chirpseq_analysis/rescaleRepeatBedgraph.py"
-parallel "python $scaleScript {.}_repeat_sorted_stats.txt {.}_repeat_norm.bedGraph {.}_repeat_scaled.bedGraph" ::: $even $odd
+parallel "python $scaleScript {.}_repeat_sorted_rmdup_stats.txt {.}_repeat_norm.bedGraph {.}_repeat_scaled.bedGraph" ::: $even $odd
 script="/home/raflynn/Scripts/chirpseq_analysis/plotChIRPRepeat.r"
 twofiles="${even%%.*}_repeat_scaled.bedGraph ${odd%%.*}_repeat_scaled.bedGraph"
 Rscript $script $twofiles $repeat_pos $name $org
@@ -74,6 +76,6 @@ Rscript $script $twofiles $repeat_pos $name $org
 parallel "rm -f {.}_genome_sorted.bam {.}_genome.sam {.}_repeat_sorted.bam {.}_repeat.sam" ::: $even $odd
 rm -f ${name}_genome_merged_twocol.bedGraph ${name}_genome_merged.bedGraph
 parallel "rm -f {.}_genome_shifted.bedGraph {.}_genome_shifted_removed.bedGraph {.}_genome_shifted_removed_norm.bedGraph" ::: $even $odd
-parallel "rm -f {.}_repeat_norm.bedGraph {.}_repeat.bedGraph" ::: $even $odd
+parallel "rm -f {.}_repeat_norm.bedGraph {.}_repeat.bedGraph {.}_genome.fastq" ::: $even $odd
 
 # # exit

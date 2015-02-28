@@ -3,7 +3,7 @@
 
 # parameters
 if [ "$#" -ne 3 ]; then
-  echo "Usage: $0 <organism> <name> <fastq>
+  echo "Usage: $0 <organism> <name> <fastq>"
   exit 1
 fi
 
@@ -41,8 +41,8 @@ parallel "python /seq/macs/bin/macs14 -t {.}_genome_sorted_rmdup.bam -f BAM -n {
 #parallel "mv {.}_genome_shifted_MACS_bedGraph/treat/*.gz {.}_genome_shifted.bedGraph.gz; rm -rf {.}_genome_shifted_MACS_bedGraph/; gunzip *.gz" ::: $even $odd
 parallel "mv {.}_genome_shifted_MACS_bedGraph/treat/*.gz {.}_genome_shifted.bedGraph.gz; gunzip {.}_genome_shifted.bedGraph.gz; rm -rf {.}_genome_shifted_MACS_bedGraph/" ::: $fastq
 
-parallel "norm_bedGraph.pl {} ${name}_genome_merged_norm.bedGraph" ::: $fastq
-bedGraphToBigWig ${name}_genome_merged_norm.bedGraph $sizes ${name}_genome_merged_norm.bw
+parallel "norm_bedGraph.pl {.}_genome_shifted.bedGraph ${name}_genome_shifted_norm.bedGraph" ::: $fastq
+bedGraphToBigWig ${name}_genome_shifted_norm.bedGraph $sizes ${name}_genome_shifted_norm.bw -clip
 
 #4. make bedgraphs for repeat index
 parallel "bedtools genomecov -ibam {.}_repeat_sorted_rmdup.bam -bg > {.}_repeat.bedGraph; norm_bedGraph.pl {.}_repeat.bedGraph {.}_repeat_norm.bedGraph" ::: $fastq
@@ -50,16 +50,17 @@ parallel "bedtools genomecov -ibam {.}_repeat_sorted_rmdup.bam -bg > {.}_repeat.
 #5. get stats for everything
 parallel "samtools flagstat {.}_genome_sorted.bam > {.}_genome_sorted_stats.txt" ::: $fastq
 parallel "samtools flagstat {.}_repeat_sorted.bam > {.}_repeat_sorted_stats.txt" ::: $fastq
+parallel "samtools flagstat {.}_genome_sorted_rmdup.bam > {.}_genome_sorted_rmdup_stats.txt" ::: $fastq
+parallel "samtools flagstat {.}_repeat_sorted_rmdup.bam > {.}_repeat_sorted_rmdup_stats.txt" ::: $fastq
 
 #6. get plots for repeats
 scaleScript="/home/raflynn/Scripts/chirpseq_analysis/rescaleRepeatBedgraph.py"
-parallel "python $scaleScript {.}_repeat_sorted_stats.txt {.}_repeat_norm.bedGraph {.}_repeat_scaled.bedGraph" ::: $fastq
+parallel "python $scaleScript {.}_repeat_sorted_rmdup_stats.txt {.}_repeat_norm.bedGraph {.}_repeat_scaled.bedGraph" ::: $fastq
 script="/home/raflynn/Scripts/chirpseq_analysis/plotChIRPRepeat.r"
-Rscript $script $fastq $repeat_pos $name $org
+Rscript $script ${fastq%%.*}_repeat_scaled.bedGraph $repeat_pos $name $org
 
 #7. remove sam and bam files
 parallel "rm -f {.}_genome_sorted.bam {.}_genome.sam {.}_repeat_sorted.bam {.}_repeat.sam" ::: $fastq
-parallel "rm -f {.}_genome_shifted.bedGraph {.}_genome_shifted_removed.bedGraph {.}_genome_shifted_removed_norm.bedGraph" ::: $fastq
-parallel "rm -f {.}_repeat_norm.bedGraph {.}_repeat.bedGraph" ::: $fastq
-
-# # exit
+parallel "rm -f {.}_genome_shifted.bedGraph " ::: $fastq
+parallel "rm -f {.}_repeat_norm.bedGraph {.}_repeat.bedGraph {.}_genome.fastq" ::: $fastq
+# exit
