@@ -27,8 +27,8 @@ else
 fi
 
 #1. bowtie
-parallel "bowtie2 -p 4 -x $repeat_index -k 1 {} --un {.}_genome.fastq -S {.}_repeat.sam" ::: $fastq
-parallel "bowtie2 -p 4 -x $genome_index -k 1 {.}_genome.fastq -S {.}_genome.sam" ::: $fastq
+parallel "bowtie2 -p 8 -x $repeat_index {} --un {.}_genome.fastq -S {.}_repeat.sam" ::: $fastq
+parallel "bowtie2 -p 8 -x $genome_index {.}_genome.fastq -S {.}_genome.sam" ::: $fastq
 
 #2. samtools - sorting and removing duplicates
 parallel "cat {.}_genome.sam | samtools view -Suo - - | samtools sort - {.}_genome_sorted" ::: $fastq
