@@ -84,8 +84,8 @@ if [ $bam_only == 1 ]; then
 fi
 
 #3. getting shifted bedgraphs for reads mapped to genome
-python /seq/macs/bin/macs14 -t ${name}_even_genome_sorted.bam -f BAM -n ${name}_even -g $org_macs -B -S
-python /seq/macs/bin/macs14 -t ${name}_odd_genome_sorted.bam -f BAM -n ${name}_odd -g $org_macs -B -S
+python /seq/macs/bin/macs14 -t ${name}_even_genome_sorted.bam -f BAM -n ${name}_even -g $org_macs -B
+python /seq/macs/bin/macs14 -t ${name}_odd_genome_sorted.bam -f BAM -n ${name}_odd -g $org_macs -B
 mv ${name}_even_MACS_bedGraph/treat/*.gz ${name}_even_genome_s.bedGraph.gz; gunzip ${name}_even_genome_s.bedGraph.gz
 mv ${name}_odd_MACS_bedGraph/treat/*.gz ${name}_odd_genome_s.bedGraph.gz; gunzip ${name}_odd_genome_s.bedGraph.gz
 rm -rf ${name}_even_MACS_bedGraph/ ${name}_odd_MACS_bedGraph/
@@ -98,7 +98,7 @@ python $norm_program ${name}_odd_genome_sr.bedGraph $sizes ${name}_odd_genome_sr
 python $remove_program ${name}_even_genome_s.bedGraph $remove ${name}_even_genome_sr.bedGraph
 python $norm_program ${name}_even_genome_sr.bedGraph $sizes ${name}_even_genome_sr_norm.bedGraph
 
-# #5. merge genome bedgraph and make bigwig
+#5. merge genome bedgraph and make bigwig
 merge_program="/home/raflynn/Scripts/chirpseq_analysis/takeLower.py"
 twofiles="${name}_even_genome_sr_norm.bedGraph ${name}_odd_genome_sr_norm.bedGraph"
 bedtools unionbedg -i $twofiles > ${name}_genome_merged_twocol.bedGraph
@@ -116,9 +116,17 @@ script="/home/raflynn/Scripts/chirpseq_analysis/plotChIRPRepeat.r"
 twofiles="${even%%.*}_repeat_scaled.bedGraph ${odd%%.*}_repeat_scaled.bedGraph"
 Rscript $script $twofiles $repeat_pos $name $org
 
-#9. remove sam and bam files
-rm -f ${name}_genome_merged_twocol.bedGraph ${name}_genome_merged.bedGraph
-rm -f {.}_genome_shifted.bedGraph {.}_genome_shifted_removed.bedGraph {.}_genome_shifted_removed_norm.bedGraph" ::: $even $odd
-parallel "rm -f {.}_repeat_norm.bedGraph {.}_repeat.bedGraph {.}_genome.fastq" ::: $even $odd
+#8. get a stringent peak list
+bedGraph2sam_script="/home/raflynn/Scripts/chirpseq_analysis/bedGraph2sam.pl"
+peak_correlation_script="/home/raflynn/Scripts/chirpseq_analysis/peak_correlation.pl"
+perl $bedGraph2sam_script $sizes ${name}_genome_merged.bedGraph ${name}_genome_merged.sam
+python /seq/macs/bin/macs14 -t ${name}_genome_merged.sam -f SAM -n merge -g $org_macs --bw=200 -m 10,50
+perl $peak_correlation_script merge_peaks.xls ${name}_even_genome_sr_norm.bedGraph ${name}_odd_genome_sr_norm.bedGraph ${name}_genome_merged_norm.bedGraph
+mv merge_peaks.xls.corr.xls ${name}_genome_merged_confidentpeaks.xls
 
-# # exit
+#9. remove sam and bam files
+rm -f ${name}_genome_merged_twocol.bedGraph ${name}_genome_merged.bedGraph ${name}_genome_merged.sam
+parallel "rm -f {.}_repeat_norm.bedGraph {.}_repeat.bedGraph {.}_genome.fastq" ::: $even $odd
+rm -f *_s.bedGraph *_sr.bedGraph
+
+# exit
