@@ -1,21 +1,29 @@
 #!/bin/sh
 # runchirp.sh
 
-while getopts ":cmh" flag; do
+bam_only=0
+compressed=0
+to_remove=0
+
+while getopts ":cmhr:" flag; do
 case "$flag" in
     m) bam_only=1
        ;;
 	c) compressed=1
 	   ;;
+	r) removal_file="$OPTARG"
+	   to_remove=1
+	   ;;
 	h) echo ""
-	   echo "Usage: $0 [-m] [-c] <organism> <name> <even fastq> <odd fastq> <removal bed file>"
+	   echo "Usage: sh $0 [-m] [-c] [-r removal bed file] <organism> <name> <even fastq> <odd fastq>"
 	   echo ""
-	   echo "    -m        Stop after mapping to BAM file"
-	   echo "    -c        Input FASTQ is compressed"
-	   echo "    -h        Help"
-	   echo "    organism  \"mouse\" or \"human\" only"
-	   echo "    name      Prefix of output files"
-	   echo "    fastqs     FASTQ or FASTQ.GZ (must specify -c)"  
+	   echo "    -m                  Stop after mapping to BAM file"
+	   echo "    -c                  Input FASTQ is compressed"
+	   echo "    -h                  Help"
+	   echo "    -r REMOVAL_FILE     File to remove ChIRPseq reads from"
+	   echo "    organism            \"mouse\" or \"human\" only"
+	   echo "    name                Prefix of output files"
+	   echo "    fastqs              FASTQ or FASTQ.GZ (must specify -c if .gz)"  
 	   echo ""
 	   exit 1
 	    ;;
@@ -28,9 +36,8 @@ done
 shift $((OPTIND-1))
 
 # parameters
-if [ "$#" -ne 5 ]; then
-  echo "$#"
-  echo "Usage: $0 <organism> <name> <even fastq> <odd fastq> <removal bed file>"
+if [ "$#" -lt 4 ]; then
+  echo "Usage: sh $0 [-m] [-c] [-r removal bed file] <organism> <name> <even fastq> <odd fastq>"
   exit 1
 fi
 
@@ -38,7 +45,6 @@ org=$1
 name=$2
 even=$3
 odd=$4
-remove=$5
 
 if [ $org == "mouse" ]; then
 	repeat_pos="~/Scripts/repeat_index/mm9/Mm_repeatIndex_spaced_positions.txt"
@@ -58,7 +64,7 @@ else
 fi
 
 #1. bowtie
-if [ $compressed == 1 ]; then
+if [ $compressed -eq 1 ]; then
 	prog="zcat"
 else 
 	prog="cat"
@@ -93,10 +99,16 @@ rm -rf ${name}_even_MACS_bedGraph/ ${name}_odd_MACS_bedGraph/
 #4. remove RNA component, and normalize
 remove_program="/home/raflynn/Scripts/chirpseq_analysis/removeInterval.py"
 norm_program="/home/raflynn/Scripts/chirpseq_analysis/normalizeBedgraph.py"
-python $remove_program ${name}_odd_genome_s.bedGraph $remove ${name}_odd_genome_sr.bedGraph
-python $norm_program ${name}_odd_genome_sr.bedGraph $sizes ${name}_odd_genome_sr_norm.bedGraph
-python $remove_program ${name}_even_genome_s.bedGraph $remove ${name}_even_genome_sr.bedGraph
-python $norm_program ${name}_even_genome_sr.bedGraph $sizes ${name}_even_genome_sr_norm.bedGraph
+
+if [ $to_remove == 1 ]; then
+	python $remove_program ${name}_odd_genome_s.bedGraph $removal_file ${name}_odd_genome_sr.bedGraph
+	python $norm_program ${name}_odd_genome_sr.bedGraph $sizes ${name}_odd_genome_sr_norm.bedGraph
+	python $remove_program ${name}_even_genome_s.bedGraph $removal_file ${name}_even_genome_sr.bedGraph
+	python $norm_program ${name}_even_genome_sr.bedGraph $sizes ${name}_even_genome_sr_norm.bedGraph
+else 
+	python $norm_program ${name}_odd_genome_s.bedGraph $sizes ${name}_odd_genome_sr_norm.bedGraph
+	python $norm_program ${name}_even_genome_s.bedGraph $sizes ${name}_even_genome_sr_norm.bedGraph
+fi
 
 #5. merge genome bedgraph and make bigwig
 merge_program="/home/raflynn/Scripts/chirpseq_analysis/takeLower.py"
