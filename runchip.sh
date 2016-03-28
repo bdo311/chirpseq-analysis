@@ -1,6 +1,9 @@
 #!/bin/sh
 # runchip_compressed.sh
 
+bam_only=0
+compressed=0
+
 while getopts ":cmh" flag; do
 case "$flag" in
     m) bam_only=1
@@ -8,14 +11,15 @@ case "$flag" in
 	c) compressed=1
 	   ;;
 	h) echo ""
-	   echo "Usage: $0 [-m] [-c] <organism> <name> <reads>"
+	   echo "Usage: $0 [-m] [-c] <organism> <name> <STAR index> <reads>"
 	   echo ""
-	   echo "    -m        Stop after mapping to BAM file"
-	   echo "    -c        Input FASTQ is compressed"
-	   echo "    -h        Help"
-	   echo "    organism  \"mouse\" or \"human\" only"
-	   echo "    name      Prefix of output files"
-	   echo "    reads     FASTQ or FASTQ.GZ (must specify -c)"  
+	   echo "    -m                  Stop after mapping to BAM file"
+	   echo "    -c                  Input FASTQ is compressed"
+	   echo "    -h                  Help"
+	   echo "    organism            \"mouse\" or \"human\" only"
+	   echo "    name                Prefix of output files"
+	   echo "    STAR index          Path to STAR index"
+	   echo "    reads               FASTQ or FASTQ.GZ (must specify -c)"  
 	   echo ""
 	   exit 1
 	    ;;
@@ -28,26 +32,25 @@ done
 shift $((OPTIND-1))
 
 # parameters
-if [ "$#" -ne 3 ]; then
-  echo "Usage: $0 [-m] [-c] <organism> <name> <reads>"
+if [ "$#" -ne 4 ]; then
+  echo "Usage: $0 [-m] [-c] <organism> <name> <STAR index> <reads>"
   exit 1
 fi
 
 org=$1
 name=$2
-fastq=$3
+genome_index=$3
+fastq=$4
 
 if [ $org == "mouse" ]; then
 	repeat_pos="~/Scripts/repeat_index/mm9/Mm_repeatIndex_spaced_positions.txt"
 	repeat_index="~/Scripts/repeat_index/mm9/rep_spaced"
-	genome_index="/seq/bowtie2-2.1.0/indexes/mm9"
 	sizes="/seq/chromosome/mm9/mm9.sizes"
 	ets="Mm_CLIP_custom_repeatIndex:2747-6754"
 	org_macs="mm"
 elif [ $org == "human" ]; then
 	repeat_pos="~/Scripts/repeat_index/hg19/Hs_repeatIndex_spaced_positions.txt"
 	repeat_index="~/Scripts/repeat_index/hg19/rep_spaced"
-	genome_index="/seq/bowtie2-2.1.0/indexes/hg19"
 	sizes="/seq/chromosome/hg19/hg19.sizes"
 	ets="Repeat_regions:3065-6722"
 	org_macs="hs"
@@ -63,10 +66,18 @@ else
 	prog="cat"
 fi
 
+# 1. map to repeat and genome
+
+# bowtie to map against repeat index
 ($prog $fastq | bowtie2 -p 8 -x $repeat_index - --un ${name}_genome.fastq | \
 samtools view -Suo - - | samtools sort - ${name}_repeat_sorted) 2> ${name}_bowtie_repeat.err
-(cat ${name}_genome.fastq | bowtie2 -p 8 -x $genome_index - | \
-samtools view -Suo - - | samtools sort - ${name}_genome_sorted) 2> ${name}_bowtie_genome.err
+# (cat ${name}_genome.fastq | bowtie2 -p 8 -x $genome_index - | \
+# samtools view -Suo - - | samtools sort - ${name}_genome_sorted) 2> ${name}_bowtie_genome.err
+
+# STAR to map against genome
+STAR --genomeDir $genome_index --runThreadN 8 --genomeLoad LoadAndKeep --readFilesIn ${name}_genome.fastq \
+--outFileNamePrefix ${name}_genome_ --alignEndsType EndToEnd --outFilterMismatchNoverLmax 0.08
+cat ${name}_genome_Aligned.out.sam | samtools view -Su -q 255 - -o - | samtools sort - ${name}_genome_sorted
 
 #2. samtools index/stats
 samtools index ${name}_genome_sorted.bam
@@ -85,28 +96,27 @@ mv ${name}_genome_shifted_MACS_bedGraph/treat/*.gz ${name}_genome_shifted.bedGra
 gunzip ${name}_genome_shifted.bedGraph.gz
 rm -rf ${name}_genome_shifted_MACS_bedGraph/
 
-samtools index ${name}_repeat_sorted_rmdup.bam
-norm_factor="$(samtools view ${name}_repeat_sorted_rmdup.bam $ets | wc -l)"
+samtools index ${name}_repeat_sorted.bam
+norm_factor="$(samtools view ${name}_repeat_sorted.bam $ets | wc -l)"
 
-# norm_bedGraph.pl ${name}_genome_shifted.bedGraph ${name}_genome_shifted_norm.bedGraph
-# bedGraphToBigWig ${name}_genome_shifted_norm.bedGraph $sizes ${name}_genome_shifted_norm.bw -clip
 gawk -F "\t" -v x=$norm_factor 'BEGIN {OFS="\t"} {print $1,$2,$3,$4 * 1000000 / x}' \
-${name}_genome_shifted.bedGraph > ${name}_genome_rnorm.bedGraph
+${name}_genome_shifted.bedGraph > ${name}_genome_shifted_rnorm.bedGraph
+bedGraphToBigWig ${name}_genome_shifted_rnorm.bedGraph $sizes ${name}_genome_shifted_rnorm.bw -clip
 norm_bedGraph.pl ${name}_genome_shifted.bedGraph ${name}_genome_shifted_norm.bedGraph
-bedGraphToBigWig ${name}_genome_shifted_rnorm.bedGraph $sizes ${name}_genome_shifted_rnorm.bw
-bedGraphToBigWig ${name}_genome_shifted_norm.bedGraph $sizes ${name}_genome_shifted_norm.bw
+bedGraphToBigWig ${name}_genome_shifted_norm.bedGraph $sizes ${name}_genome_shifted_norm.bw -clip
 
 #4. make bedgraphs for repeat index
-parallel "bedtools genomecov -ibam {.}_repeat_sorted_rmdup.bam -bg > {.}_repeat.bedGraph; norm_bedGraph.pl {.}_repeat.bedGraph {.}_repeat_norm.bedGraph" ::: $fastq
+bedtools genomecov -ibam ${name}_repeat_sorted.bam -bg > ${name}_repeat.bedGraph; norm_bedGraph.pl ${name}_repeat.bedGraph ${name}_repeat_norm.bedGraph
 
 #5. get plots for repeats
 scaleScript="/home/raflynn/Scripts/chirpseq_analysis/rescaleRepeatBedgraph.py"
-parallel "python $scaleScript {.}_repeat_sorted_rmdup_stats.txt {.}_repeat_norm.bedGraph {.}_repeat_scaled.bedGraph" ::: $fastq
+python $scaleScript ${name}_repeat_sorted_stats.txt ${name}_repeat_norm.bedGraph ${name}_repeat_scaled.bedGraph
 script="/home/raflynn/Scripts/chirpseq_analysis/plotChIRPRepeat.r"
-Rscript $script ${fastq%%.*}_repeat_scaled.bedGraph $repeat_pos $name $org
+Rscript $script ${name}_repeat_scaled.bedGraph $repeat_pos $name $org
 
-# #6. remove unneeded files
-# parallel "rm -f {.}_genome_shifted.bedGraph " ::: $fastq
-# parallel "rm -f {.}_repeat_norm.bedGraph {.}_repeat.bedGraph {.}_genome.fastq" ::: $fastq
+#6. remove unneeded files
+rm -f *_Log.progress.out *Log.out *_SJ.out.tab
+rm -f *_genome_shifted.bedGraph
+rm -f *.sam
 
-exit 1
+exit 0
