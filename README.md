@@ -3,6 +3,8 @@ chirpseq-analysis
 
 This is a set of scripts that together convert ChIRP-seq (chromatin immunoprecipitation followed by RNA purification and sequencing) fastq files into plots and bedgraphs suitable for downstream processing by [metagene-maker](https://github.com/bdo311/metagene-maker/). 
 
+Some of these scripts were authored by [Kun Qu](http://en.biox.ustc.edu.cn/Faculty/qnqr/201602/t20160221_236962.html).
+
 Usage 
 ------
 `runchirp.sh <organism> <name> <even fastq> <odd fastq> <removal bed file>`
